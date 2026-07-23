@@ -8,7 +8,7 @@ export async function POST(req) {
     return Response.json(
       {
         error:
-          "Koi API key set nahi hai. .env.local mein GEMINI_API_KEY (free) ya ANTHROPIC_API_KEY daalo aur dev server restart karo.",
+          "No API key configured. Set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in your environment variables.",
       },
       { status: 500 }
     );
@@ -24,7 +24,7 @@ export async function POST(req) {
   const userText = (body?.text || "").toString().trim();
   if (!userText) {
     return Response.json(
-      { error: "Kuch text likho jisse diagram banana hai." },
+      { error: "Please enter a description to generate a diagram." },
       { status: 400 }
     );
   }
@@ -42,17 +42,20 @@ export async function POST(req) {
       return Response.json({ diagram: result.data });
     } catch (err) {
       lastError = err?.message || String(err);
-      // auth/quota jaise errors pe retry ka fayda nahi — turant saaf message do
+      // no point retrying auth/quota errors — return a clear message immediately
       const msg = lastError.toLowerCase();
       if (msg.includes("api key") || msg.includes("api_key") || msg.includes("permission")) {
         return Response.json(
-          { error: "API key galat ya invalid hai. Sahi key .env.local mein daalo." },
+          { error: "Invalid API key. Please check your API key configuration." },
           { status: 401 }
         );
       }
       if (msg.includes("quota") || msg.includes("rate") || msg.includes("credit") || msg.includes("balance")) {
         return Response.json(
-          { error: "Quota/credit khatam ya rate limit. Thodi der baad ya doosri key se try karo." },
+          {
+            error:
+              "Daily free limit reached or rate limited. Please try again in a little while, or add a fresh API key.",
+          },
           { status: 429 }
         );
       }
@@ -60,7 +63,7 @@ export async function POST(req) {
   }
 
   return Response.json(
-    { error: "Diagram generate nahi ho paya.", detail: lastError },
+    { error: "Could not generate the diagram. Please try again.", detail: lastError },
     { status: 502 }
   );
 }
